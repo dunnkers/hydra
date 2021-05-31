@@ -11,6 +11,7 @@ from hydra.core.hydra_config import HydraConfig
 from hydra.core.singleton import Singleton
 from hydra.core.utils import (
     JobReturn,
+    JobStatus,
     configure_log,
     filter_overrides,
     run_job,
@@ -31,6 +32,7 @@ def execute_job(
     sweep_config: DictConfig,
     task_function: TaskFunction,
     singleton_state: Dict[Any, Any],
+    fail_hard: bool,
 ) -> JobReturn:
     setup_globals()
     Singleton.set_state(singleton_state)
@@ -44,6 +46,17 @@ def execute_job(
         job_dir_key="hydra.sweep.dir",
         job_subdir_key="hydra.sweep.subdir",
     )
+
+    if ret.status != JobStatus.COMPLETED and fail_hard:
+        log.error(f"Task `{ret.task_name}` failed and failing hard: raising exception.")
+
+        if isinstance(ret._return_value, Exception):
+            raise ret._return_value
+        else:
+            raise Exception(
+                f"Task `{ret.task_name}` failed due to an unkown reason. "
+                + f"Return value: {ret._return_value}"
+            )
 
     return ret
 
@@ -130,6 +143,7 @@ def launch(
             sweep_config=sweep_config,
             task_function=launcher.task_function,
             singleton_state=singleton_state,
+            fail_hard=rq_cfg.fail_hard,
             **enqueue_keywords,
         )
         jobs.append(job)

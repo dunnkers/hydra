@@ -55,6 +55,8 @@ class RQLauncherConf:
     stop_after_enqueue: bool = False
     # wait time in seconds when polling results
     wait_polling: float = 1.0
+    # fail hard: raise an exception when a job failed instead of returning successfully
+    fail_hard: bool = False
 
 
 ConfigStore.instance().store(
